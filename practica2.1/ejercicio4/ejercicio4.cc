@@ -12,75 +12,76 @@
 
 int main(int argc, char **argv)
 {
-struct addrinfo hints;
-struct addrinfo * res;
+    struct addrinfo hints;
+    struct addrinfo *res;
 
-// ---------------------------------------------------------------------- //
-// INICIALIZACIÓN SOCKET & BIND //
-// ---------------------------------------------------------------------- //
+    // ---------------------------------------------------------------------- //
+    // INICIALIZACIÓN SOCKET & BIND //
+    // ---------------------------------------------------------------------- //
 
-memset(&hints, 0, sizeof(struct addrinfo));
+    memset(&hints, 0, sizeof(struct addrinfo));
 
-hints.ai_family = AF_INET;
-hints.ai_socktype = SOCK_STREAM;
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
 
-int rc = getaddrinfo(argv[1], argv[2], &hints, &res);
+    int rc = getaddrinfo(argv[1], argv[2], &hints, &res);
 
-if ( rc != 0 )
-{
-std::cerr << "getaddrinfo: " << gai_strerror(rc) << std::endl;
-return -1;
-}
+    if (rc != 0)
+    {
+        std::cerr << "getaddrinfo: " << gai_strerror(rc) << std::endl;
+        return -1;
+    }
 
-// res contiene la representación como sockaddr de dirección + puerto
+    // res contiene la representación como sockaddr de dirección + puerto
 
-int sd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    int sd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
-if ( bind(sd, res->ai_addr, res->ai_addrlen) != 0 )
-{
-std::cerr << "bind: " << std::endl;
-return -1;
-}
+    if (bind(sd, res->ai_addr, res->ai_addrlen) != 0)
+    {
+        std::cerr << "bind: " << std::endl;
+        return -1;
+    }
 
-freeaddrinfo(res);
+    freeaddrinfo(res);
 
-// ---------------------------------------------------------------------- //
-// PUBLICAR EL SERVIDOR (LISTEN) //
-// ---------------------------------------------------------------------- //
-listen(sd, 16);
+    // ---------------------------------------------------------------------- //
+    // PUBLICAR EL SERVIDOR (LISTEN) //
+    // ---------------------------------------------------------------------- //
+    listen(sd, 16);
+    // ---------------------------------------------------------------------- //
+    // GESTION DE LAS CONEXIONES AL SERVIDOR //
+    // ---------------------------------------------------------------------- //
+    struct sockaddr client_addr;
+    socklen_t client_len = sizeof(struct sockaddr);
 
-// ---------------------------------------------------------------------- //
-// GESTION DE LAS CONEXIONES AL SERVIDOR //
-// ---------------------------------------------------------------------- //
-struct sockaddr client_addr;
-socklen_t client_len = sizeof(struct sockaddr);
+    char host[NI_MAXHOST];
+    char service[NI_MAXSERV];
 
-char host[NI_MAXHOST];
-char service[NI_MAXSERV];
+    int sd_client = accept(sd, &client_addr, &client_len);
 
-int sd_client = accept(sd, &client_addr, &client_len);
+    getnameinfo(&client_addr, client_len, host, NI_MAXHOST, service,
+                NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
 
-getnameinfo(&client_addr, client_len, host, NI_MAXHOST, service,
-NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
+    std::cout << "Conexión desde " << host << " " << service << std::endl;
 
-std::cout << "CONEXION DESDE IP: " << host << " PUERTO: " << service
-<< std::endl;
+    // ---------------------------------------------------------------------- //
+    // GESTION DE LA CONEXION CLIENTE //
+    // ---------------------------------------------------------------------- //
+    bool server = true;
 
-// ---------------------------------------------------------------------- //
-// GESTION DE LA CONEXION CLIENTE //
-// ---------------------------------------------------------------------- //
-char buffer[80];
+    while (server)
+    {
+        char buffer[80];
 
-ssize_t bytes = recv(sd_client, (void *) buffer, sizeof(char)*79, 0);
+        ssize_t bytes = recv(sd_client, (void *)buffer, sizeof(char) * 79, 0);
 
-if ( bytes <= 0 )
-{
-return 0;
-}
+        if (bytes <= 0)
+        {
+            return 0;
+        }
+        send(sd_client, (void *)buffer, bytes, 0);
+    }
+    std::cout << "Conexión terminada" << std::endl;
 
-std::cout << "MENSAJE: " << buffer << std::endl;
-
-send(sd_client, (void *) buffer, bytes, 0);
-
-return 0;
+    return 0;
 }
