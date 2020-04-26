@@ -8,67 +8,101 @@
 
 int main(int argc, char **argv)
 {
-   struct addrinfo hints;
-struct addrinfo * res;
+    struct addrinfo hints;
+    struct addrinfo *res;
 
-// ---------------------------------------------------------------------- //
-// INICIALIZACIÓN SOCKET & BIND //
-// ---------------------------------------------------------------------- //
+    // ---------------------------------------------------------------------- //
+    // INICIALIZACIÓN SOCKET & BIND //
+    // ---------------------------------------------------------------------- //
 
-memset(&hints, 0, sizeof(struct addrinfo));
+    memset(&hints, 0, sizeof(struct addrinfo));
 
-hints.ai_family = AF_INET;
-hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_protocol = IPPROTO_UDP;
 
-int rc = getaddrinfo(argv[1], argv[2], &hints, &res);
+    int rc = getaddrinfo(argv[1], argv[2], &hints, &res);
 
-if ( rc != 0 )
-{
-std::cerr << "getaddrinfo: " << gai_strerror(rc) << std::endl;
-return -1;
-}
+    if (rc != 0)
+    {
+        std::cerr << "Error: " << gai_strerror(rc) << std::endl;
+        return -1;
+    }
 
-// res contiene la representación como sockaddr de dirección + puerto
+    // res contiene la representación como sockaddr de dirección + puerto
 
-int sd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    int sd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
-if ( bind(sd, res->ai_addr, res->ai_addrlen) != 0 )
-{
-std::cerr << "bind: " << std::endl;
-return -1;
-}
+    if (bind(sd, res->ai_addr, res->ai_addrlen) != 0)
+    {
+        std::cerr << "Error: Could not bind socket" << std::endl;
+        return -1;
+    }
 
-freeaddrinfo(res);
+    freeaddrinfo(res);
 
-// ---------------------------------------------------------------------- //
-// RECEPCIÓN MENSAJE DE CLIENTE //
-// ---------------------------------------------------------------------- //
-char buffer[80];
-char host[NI_MAXHOST];
-char service[NI_MAXSERV];
+    // ---------------------------------------------------------------------- //
+    // RECEPCIÓN MENSAJE DE CLIENTE //
+    // ---------------------------------------------------------------------- //
+    bool server = true;
+    while (server)
+    {
 
-struct sockaddr client_addr;
-socklen_t client_len = sizeof(struct sockaddr);
+        char buffer[80];
+        char host[NI_MAXHOST];
+        char service[NI_MAXSERV];
 
-ssize_t bytes = recvfrom(sd, buffer, 79 * sizeof(char), 0, &client_addr,
-&client_len);
+        struct sockaddr client_addr;
+        socklen_t client_len = sizeof(struct sockaddr);
 
-if ( bytes == -1)
-{
-std::cerr << "recvfrom: " << std::endl;
-return -1;
-}
+        ssize_t bytes = recvfrom(sd, buffer, 79 * sizeof(char), 0, &client_addr,
+                                 &client_len);
 
-getnameinfo(&client_addr, client_len, host, NI_MAXHOST, service,
-NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
+        if (bytes == -1)
+        {
+            std::cerr << "recvfrom: " << std::endl;
+            return -1;
+        }
 
-std::cout << "IP: " << host << " PUERTO: " << service
-<< "MENSAJE: " << buffer << std::endl;
+        getnameinfo(&client_addr, client_len, host, NI_MAXHOST, service,
+                    NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
 
-// ---------------------------------------------------------------------- //
-// RESPUESTA AL CLIENTE //
-// ---------------------------------------------------------------------- //
-sendto(sd, buffer, bytes, 0, &client_addr, client_len);
+        std::cout << bytes << " bytes de  " << host << ":" << service << std::endl;
+        time_t rawtime;
+        size_t len;
+        struct tm *info;
+        char buf[80];
 
-return 0;
+        time(&rawtime);
+        info = localtime(&rawtime);
+
+        if (buffer[0] == 't')
+        {
+            len = strftime(buf, 80, "%I:%M:%S %p", info);
+            memset(buf + len, '\0', sizeof(buf));
+        }
+        else if (buffer[0] == 'd')
+        {
+            len = strftime(buf, 80, "%F", info);
+            memset(buf + len, '\0', sizeof(buf));
+        }
+        else if (buffer[0] == 'q')
+        {
+            std::cout << "Saliendo..." << std::endl;
+            memset(buf, '\0', sizeof(buf));
+            server = false;
+        }
+        else
+        {
+            memset(buf, '\0', sizeof(buf));
+            std::cout << "Comando no soportado " << buffer[0] << std::endl;
+        }
+
+        // ---------------------------------------------------------------------- //
+        // RESPUESTA AL CLIENTE //
+        // ---------------------------------------------------------------------- //
+        sendto(sd, buf, sizeof(buf), 0, &client_addr, client_len);
+    }
+
+    return 0;
 }
