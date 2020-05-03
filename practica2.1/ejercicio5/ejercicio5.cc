@@ -23,6 +23,7 @@ int main(int argc, char **argv)
 
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
 
     int rc = getaddrinfo(argv[1], argv[2], &hints, &res);
 
@@ -36,52 +37,42 @@ int main(int argc, char **argv)
 
     int sd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
-    if (bind(sd, res->ai_addr, res->ai_addrlen) != 0)
-    {
-        std::cerr << "bind: " << std::endl;
-        return -1;
-    }
-
-    freeaddrinfo(res);
-
     // ---------------------------------------------------------------------- //
-    // PUBLICAR EL SERVIDOR (LISTEN) //
+    // CONEXION AL SERVIDOR //
     // ---------------------------------------------------------------------- //
-    listen(sd, 16);
-    // ---------------------------------------------------------------------- //
-    // GESTION DE LAS CONEXIONES AL SERVIDOR //
-    // ---------------------------------------------------------------------- //
-    struct sockaddr client_addr;
-    socklen_t client_len = sizeof(struct sockaddr);
-
     char host[NI_MAXHOST];
     char service[NI_MAXSERV];
 
-    int sd_client = accept(sd, &client_addr, &client_len);
-
-    getnameinfo(&client_addr, client_len, host, NI_MAXHOST, service,
-                NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
-
-    std::cout << "Conexión desde " << host << " " << service << std::endl;
+    int sd_server = connect(sd, res->ai_addr, res->ai_addrlen);
 
     // ---------------------------------------------------------------------- //
-    // GESTION DE LA CONEXION CLIENTE //
+    // GESTION DE LA CONEXION SERVIDOR //
     // ---------------------------------------------------------------------- //
-    bool server = true;
+    bool connection = true;
 
-    while (server)
+    while (connection)
     {
         char buffer[80];
 
-        ssize_t bytes = recv(sd_client, (void *)buffer, sizeof(char) * 79, 0);
+        std::cin >> buffer;
 
-        if (bytes <= 0)
+        if (buffer[0] == 'Q' && buffer[1] == '\0')
         {
-            return 0;
+            connection = false;
         }
-        send(sd_client, (void *)buffer, bytes, 0);
+
+        else
+        {
+            send(sd_server, (void *)buffer, sizeof(buffer), 0);
+
+            recv(sd_server, (void *)buffer, sizeof(char) * 79, 0);
+
+            std::cout << buffer << std::endl;
+        }
     }
-    std::cout << "Conexión terminada" << std::endl;
+
+    close(sd_server);
+    freeaddrinfo(res);
 
     return 0;
 }

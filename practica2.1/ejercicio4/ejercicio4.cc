@@ -77,11 +77,12 @@ int main(int argc, char **argv)
 
         if (bytes <= 0)
         {
-            return 0;
+            server = false;
         }
         send(sd_client, (void *)buffer, bytes, 0);
     }
     std::cout << "Conexión terminada" << std::endl;
-
+    
+    close(sd_client);
     return 0;
 }
