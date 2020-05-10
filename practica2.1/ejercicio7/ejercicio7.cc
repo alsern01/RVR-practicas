@@ -15,9 +15,9 @@
 #include <vector>
 
 // Mutex para la seccion critica
-static std::mutex MUTEX;
-static std::condition_variable V_COND;
-static bool END = false;
+//static std::mutex MUTEX;
+//static std::condition_variable V_COND;
+//static bool END = false;
 
 class Mensaje
 {
@@ -30,79 +30,40 @@ class Mensaje
     ~Mensaje(){};
 
     // metodo para gestionar mensajes
-    void haz_mensaje()
+    void haz_mensaje(int sd_c)
     {
         // ---------------------------------------------------------------------- //
-        // RECEPCIÓN MENSAJE DE CLIENTE //
+        // GESTION CONEXION CLIENTE //
         // ---------------------------------------------------------------------- //
-        char buffer[80];
-        char host[NI_MAXHOST];
-        char service[NI_MAXSERV];
 
-        struct sockaddr client_addr;
-        socklen_t client_len = sizeof(struct sockaddr);
+        char buffer[80];
 
         while (up_)
         {
             memset(&buffer, 0, sizeof(buffer));
-            ssize_t bytes = recvfrom(sd_, buffer, 79 * sizeof(char), 0, &client_addr,
-                                     &client_len);
+            ssize_t bytes = recv(sd_c, (void *)buffer, sizeof(char) * 79, 0);
 
-            if (bytes == -1)
+            if (bytes <= 0)
             {
-                std::cerr << "recvfrom: " << std::endl;
-                return;
-            }
-
-            int err = getnameinfo(&client_addr, client_len, host, NI_MAXHOST, service,
-                                  NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
-
-            std::cout << bytes << " bytes de  " << host << ":" << service << std::endl;
-
-            if (err != 0)
-            {
-                std::cerr << "getnameinfo: " << std::endl;
-                return;
-            }
-
-            time_t rawtime;
-            size_t len;
-            struct tm *info;
-            char buf[sizeof(buffer)];
-            memset(&buf, 0, sizeof(buf));
-
-            time(&rawtime);
-            info = localtime(&rawtime);
-
-            if (buffer[0] == 't')
-            {
-                strftime(buf, 80, "%I:%M:%S %p", info);
-                sendto(sd_, buf, strlen(buf), 0, &client_addr, client_len);
-            }
-
-            else if (buffer[0] == 'd')
-            {
-                len = strftime(buf, 80, "%F", info);
-                sendto(sd_, buf, strlen(buf), 0, &client_addr, client_len);
-            }
-
-            else if (buffer[0] == 'q')
-            {
-                std::cout << "Saliendo..." << std::endl;
                 up_ = false;
-                END = true;
-                std::unique_lock<std::mutex> lock(MUTEX);
-                V_COND.notify_one();
+                std::cout << "Conexión terminada" << std::endl;
+                std::cout << "THREAD: " << std::this_thread::get_id() << std::endl;
+                std::cout << "--------------------------" << std::endl;
             }
 
-            else
+            if (buffer[0] == 'Q' && strlen(buffer) <= 2)
             {
-                std::cout << "Comando no soportado " << buffer[0] << std::endl;
+                up_ = false;
+                std::cout << "Conexión terminada" << std::endl;
+                return;
             }
 
+            send(sd_c, (void *)buffer, bytes, 0);
+
+            buffer[strlen(buffer) - 1] = '\0';
+            std::cout << "MENSAJE: " << buffer << std::endl;
             std::cout << "THREAD: " << std::this_thread::get_id() << std::endl;
             std::cout << "--------------------------" << std::endl;
-            sleep(10);
         }
     };
 };
@@ -119,7 +80,7 @@ int main(int argc, char **argv)
     memset(&hints, 0, sizeof(struct addrinfo));
 
     hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_socktype = SOCK_STREAM;
 
     int rc = getaddrinfo(argv[1], argv[2], &hints, &res);
 
@@ -141,27 +102,52 @@ int main(int argc, char **argv)
 
     freeaddrinfo(res);
 
+    // ---------------------------------------------------------------------- //
+    // PUBLICAR EL SERVIDOR (LISTEN) //
+    // ---------------------------------------------------------------------- //
+    listen(sd, 16);
+    // ---------------------------------------------------------------------- //
+    // GESTION DE LAS CONEXIONES AL SERVIDOR //
+    // ---------------------------------------------------------------------- //
+    struct sockaddr client_addr;
+    socklen_t client_len = sizeof(struct sockaddr);
+
+    char host[NI_MAXHOST];
+    char service[NI_MAXSERV];
+
+    int sd_client;
+
     // -------------------------------------------------------------------------
     // POOL DE THREADS
     // -------------------------------------------------------------------------
     std::vector<std::thread> pool;
 
-    for (int i = 0; i < 5; ++i)
+    do
     {
+        sd_client = accept(sd, &client_addr, &client_len);
+
+        getnameinfo(&client_addr, client_len, host, NI_MAXHOST, service,
+                    NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
+
+        std::cout << "Conexión desde " << host << " " << service << std::endl;
+
         pool.push_back(std::thread([&]() {
             Mensaje msg(sd);
-            msg.haz_mensaje();
+            msg.haz_mensaje(sd_client);
         }));
-    }
+
+    } while (sd_client != -1);
 
     // MUTEX
-    std::unique_lock<std::mutex> lock(MUTEX);
-    V_COND.wait(lock, [&]() { return END; });
+    //std::unique_lock<std::mutex> lock(MUTEX);
+    //V_COND.wait(lock, [&]() { return END; });
 
     for (auto &t : pool)
     {
-        t.detach();
+        t.join();
     }
+
+    std::cout << "Conexion terminada" << std::endl;
 
     close(sd);
 
