@@ -124,23 +124,51 @@ void ChatClient::login()
 
 void ChatClient::logout()
 {
-
+    // Crea mensaje de logout
+    std::string msg = "Usuario " + nick + " se ha desconectado.";
+    // Saca por pantalla
+    std::cout << msg << std::endl;
+    // Crea el ChatMessage
+    ChatMessage m(nick, msg);
+    m.type = ChatMessage::LOGOUT;
+    // Envia al servidor
+    socket.send(m, socket);
 }
 
 void ChatClient::input_thread()
 {
-    while (true)
+    while (connected)
     {
         // Leer stdin con std::getline
+        std::string msg;
+        std::getline(std::cin, msg);
+
         // Enviar al servidor usando socket
+        if (msg[0] == 'q' && msg.length() == 1)
+        {
+            connected = false;
+        }
+        else
+        {
+            ChatMessage sm(nick, msg);
+            sm.type = ChatMessage::MESSAGE;
+            socket.send(sm, socket);
+        }
     }
 }
 
 void ChatClient::net_thread()
 {
-    while(true)
+    while (connected)
     {
         //Recibir Mensajes de red
+        ChatMessage rm;
+        socket.recv(rm);
+
         //Mostrar en pantalla el mensaje de la forma "nick: mensaje"
+        if (rm.type == ChatMessage::MESSAGE)
+            std::cout << rm.nick << ": " << rm.message << std::endl;
+        else
+            std::cout << rm.message << std::endl;
     }
 }
