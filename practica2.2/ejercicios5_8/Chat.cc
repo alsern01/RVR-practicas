@@ -7,41 +7,41 @@ void ChatMessage::to_bin()
     memset(_data, 0, MESSAGE_SIZE);
 
     //Serializar los campos type, nick y message en el buffer _data
-    char *tmp = _data;
-    // Copia en tmp lo que hay en type
-    memcpy(tmp, &type, sizeof(uint8_t));
+    char *buf = _data;
+    // Copia en buf lo que hay en type
+    memcpy(buf, &type, sizeof(uint8_t));
     // Mueve el puntero
-    tmp += sizeof(uint8_t);
-    // Copia en tmp el nick
-    memcpy(tmp, nick.c_str(), 7 * sizeof(char));
+    buf += sizeof(uint8_t);
+    // Copia en buf el nick
+    memcpy(buf, nick.c_str(), strlen(nick.c_str()));
     // Mueve el puntero 8 posiciones (la 8 sera para '\0')
-    tmp += 8 * sizeof(char);
-    // Copia en tmp el message
-    memcpy(tmp, message.c_str(), 79 * sizeof(char));
+    buf += 8 * sizeof(char);
+    // Copia en buf el message
+    memcpy(buf, message.c_str(), strlen(message.c_str()));
 }
 
 int ChatMessage::from_bin(char *bobj)
 {
     alloc_data(MESSAGE_SIZE);
 
-    memcpy(static_cast<void *>(_data), bobj, MESSAGE_SIZE);
+    //memcpy(&_data, bobj, MESSAGE_SIZE);
 
     //Reconstruir la clase usando el buffer _data
-    char *tmp = _data;
+    _data = bobj;
 
-    // Copia en type lo que hay en tmp
-    memcpy(&type, tmp, sizeof(int8_t));
+    // Copia en type lo que hay en buffer
+    memcpy(&type, _data, sizeof(int8_t));
     // Mueve manualmente el puntero
-    tmp += sizeof(int8_t);
-    // Copia en nick lo que hay en tmp
+    _data += sizeof(int8_t);
+    // Copia en nick lo que hay en buffer
     char nick_[8];
-    memcpy(nick_, tmp, 8 * sizeof(char));
+    memcpy(nick_, _data, 7 * sizeof(char));
     nick = nick_;
 
-    tmp += 8 * sizeof(char);
+    _data += 8 * sizeof(char);
     char msg[80];
-    // Copia en msg lo que hay en tmp
-    memcpy(msg, tmp, 80 * sizeof(char));
+    // Copia en msg lo que hay en buffer
+    memcpy(msg, _data, 79 * sizeof(char));
     message = msg;
 
     // Control de errores
@@ -60,7 +60,9 @@ void ChatServer::do_messages()
     {
         //Recibir Mensajes en y en función del tipo de mensaje
         ChatMessage *msg = new ChatMessage();
+
         socket.recv(*msg, (Socket *&)*(&socket));
+
         switch (msg->type)
         {
         // - LOGIN: Añadir al vector clients
@@ -155,6 +157,7 @@ void ChatClient::input_thread()
             socket.send(sm, socket);
         }
     }
+    logout();
 }
 
 void ChatClient::net_thread()
