@@ -59,13 +59,52 @@ void ChatServer::do_messages()
     while (true)
     {
         //Recibir Mensajes en y en función del tipo de mensaje
-
+        ChatMessage *msg = new ChatMessage();
+        socket.recv(*msg, (Socket *&)*(&socket));
+        switch (msg->type)
+        {
         // - LOGIN: Añadir al vector clients
-
+        case ChatMessage::LOGIN:
+        {
+            clients.push_back(&socket);
+            std::cout << msg->nick << " se unió al chat" << std::endl;
+            break;
+        }
         // - LOGOUT: Eliminar del vector clients
-
+        case ChatMessage::LOGOUT:
+        {
+            std::cout << msg->nick << " abandonó el chat" << std::endl;
+            bool erased = false;
+            std::vector<Socket *>::iterator it = clients.begin();
+            for (int i = 0; i < clients.size() && !erased; ++i)
+            {
+                if (socket == *clients.at(i))
+                {
+                    clients.erase(it);
+                    erased = true;
+                }
+                ++it;
+            }
+            break;
+        }
         // - MESSAGE: Reenviar el mensaje a todos los clientes (menos el emisor)
-
+        case ChatMessage::MESSAGE:
+        {
+            std::cout << msg->nick << ": " << msg->message << std::endl;
+            for (int i = 0; i < clients.size(); ++i)
+            {
+                if (socket == *clients.at(i))
+                {
+                    // Si es el emisor no hace nada
+                }
+                else
+                    socket.send(*msg, *clients.at(i));
+            }
+            break;
+        }
+        default:
+            break;
+        }
     }
 }
 
