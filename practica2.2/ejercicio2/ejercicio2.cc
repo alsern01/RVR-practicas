@@ -11,17 +11,18 @@
 #include <unistd.h>
 #include <errno.h>
 
+static const size_t MAX_LENGTH = 80;
+
 class Jugador : public Serializable
 {
 
-  private:
-    static const size_t MAX_LENGTH = 80;
+private:
     char name[MAX_LENGTH];
 
     int16_t x;
     int16_t y;
 
-  public:
+public:
     Jugador(const char *_n, int16_t _x, int16_t _y) : x(_x), y(_y)
     {
         strncpy(name, _n, MAX_LENGTH);
@@ -46,8 +47,8 @@ class Jugador : public Serializable
         tmp += 20 * sizeof(char);
         // Copiar la posicionX y posicionY
         memcpy(tmp, &x, sizeof(int16_t)); // tmp = posicion 20
-        tmp += sizeof(int16_t);             // Mueve 2 bytes la posicion
-        memcpy(tmp, &y, sizeof(int16_t));   // tmp = 20+2
+        tmp += sizeof(int16_t);           // Mueve 2 bytes la posicion
+        memcpy(tmp, &y, sizeof(int16_t)); // tmp = 20+2
     }
 
     int from_bin(char *data)
