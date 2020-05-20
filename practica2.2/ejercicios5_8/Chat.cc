@@ -27,21 +27,21 @@ int ChatMessage::from_bin(char *bobj)
     //memcpy(&_data, bobj, MESSAGE_SIZE);
 
     //Reconstruir la clase usando el buffer _data
-    _data = bobj;
+    char* buf = bobj;
 
     // Copia en type lo que hay en buffer
-    memcpy(&type, _data, sizeof(int8_t));
+    memcpy(&type, buf, sizeof(int8_t));
     // Mueve manualmente el puntero
-    _data += sizeof(int8_t);
+    buf += sizeof(int8_t);
     // Copia en nick lo que hay en buffer
     char nick_[8];
-    memcpy(nick_, _data, 7 * sizeof(char));
+    memcpy(nick_, buf, 8 * sizeof(char));
     nick = nick_;
 
-    _data += 8 * sizeof(char);
+    buf += 8 * sizeof(char);
     char msg[80];
     // Copia en msg lo que hay en buffer
-    memcpy(msg, _data, 79 * sizeof(char));
+    memcpy(msg, buf, 80 * sizeof(char));
     message = msg;
 
     // Control de errores
@@ -61,15 +61,17 @@ void ChatServer::do_messages()
         //Recibir Mensajes en y en función del tipo de mensaje
         ChatMessage *msg = new ChatMessage();
 
-        socket.recv(*msg, (Socket *&)*(&socket));
+        Socket *sock;
+        socket.recv(*msg, sock);
 
         switch (msg->type)
         {
         // - LOGIN: Añadir al vector clients
         case ChatMessage::LOGIN:
         {
-            clients.push_back(&socket);
+            clients.push_back(sock);
             std::cout << msg->nick << " se unió al chat" << std::endl;
+
             break;
         }
         // - LOGOUT: Eliminar del vector clients
@@ -77,14 +79,17 @@ void ChatServer::do_messages()
         {
             std::cout << msg->nick << " abandonó el chat" << std::endl;
             bool erased = false;
+
             std::vector<Socket *>::iterator it = clients.begin();
-            for (int i = 0; i < clients.size() && !erased; ++i)
+            int i = 0;
+            while (i < clients.size() && !erased)
             {
-                if (socket == *clients.at(i))
+                if (*sock == *clients.at(i))
                 {
                     clients.erase(it);
                     erased = true;
                 }
+                ++i;
                 ++it;
             }
             break;
@@ -93,14 +98,12 @@ void ChatServer::do_messages()
         case ChatMessage::MESSAGE:
         {
             std::cout << msg->nick << ": " << msg->message << std::endl;
-            for (int i = 0; i < clients.size(); ++i)
+            for (int i = 0; i < clients.size(); i++)
             {
-                if (socket == *clients.at(i))
+                if (!(*sock == *clients.at(i)))
                 {
-                    // Si es el emisor no hace nada
-                }
-                else
                     socket.send(*msg, *clients.at(i));
+                }
             }
             break;
         }

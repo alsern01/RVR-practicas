@@ -44,19 +44,16 @@ int Socket::recv(Serializable &obj, Socket *&sock)
     struct sockaddr sa;
     socklen_t sa_len = sizeof(struct sockaddr);
 
-    char buffer[MAX_MESSAGE_SIZE];
+    char buffer[90];
 
-    ssize_t bytes = ::recvfrom(sd, buffer, MAX_MESSAGE_SIZE, 0, &sa, &sa_len);
+    ssize_t bytes = ::recvfrom(sd, buffer, sizeof(buffer), 0, &sa, &sa_len);
 
     if (bytes <= 0)
     {
         return -1;
     }
 
-    if (sock != 0)
-    {
-        sock = new Socket(&sa, sa_len);
-    }
+    sock = new Socket(&sa, sa_len);
 
     obj.from_bin(buffer);
 
@@ -65,11 +62,12 @@ int Socket::recv(Serializable &obj, Socket *&sock)
 
 int Socket::send(Serializable &obj, const Socket &sock)
 {
-    //Serializar el objeto
+
+    // Serializar el objeto
     obj.to_bin();
 
     //Enviar el objeto binario a sock usando el socket sd
-    int err = sendto(sd, obj.data(), MAX_MESSAGE_SIZE, 0, &sock.sa, sock.sa_len);
+    int err = sendto(sd, obj.data(), obj.size(), 0, &sock.sa, sock.sa_len);
     if (err == -1)
     {
         std::cerr << "err sento: " << std::endl;
@@ -86,7 +84,7 @@ bool operator==(const Socket &s1, const Socket &s2)
     struct sockaddr_in *s2_ = (struct sockaddr_in *)&s2.sa;
 
     //Retornar false si alguno difiere
-    return (&s1.sa.sa_family == &s2.sa.sa_family) && (s1_->sin_addr.s_addr == s2_->sin_addr.s_addr) && (s1_->sin_port == s2_->sin_port);
+    return ((s1_->sin_family == s2_->sin_family) && (s1_->sin_addr.s_addr == s2_->sin_addr.s_addr) && (s1_->sin_port == s2_->sin_port));
 };
 
 std::ostream &operator<<(std::ostream &os, const Socket &s)
