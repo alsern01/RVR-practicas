@@ -1,0 +1,5 @@
+**TO DO LIST**
+	= En el ejemplo probar pequeño bucle de juego
+	= Trasladar ese bucle al servidor de juego
+	= Integrar todo y que no explote
+	= Serializar los datos importantes para el paso de mensajes
