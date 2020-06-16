@@ -100,6 +100,13 @@ public:
         XDrawRectangle(xl_dpy, xl_wdw, xl_gc, x, y, w, h);
     }
 
+    // Dibuja un rectángulo relleno con vértice superior-izquierdo en (x,y), ancho w
+    // y alto h
+    void rectangleFill(int32_t x, int32_t y, int32_t w, int32_t h)
+    {
+        XFillRectangle(xl_dpy, xl_wdw, xl_gc, x, y, w, h);
+    }
+
     // Escribe un texto en la posición (x,y)
     void text(int32_t x, int32_t y, const std::string& txt)
     {

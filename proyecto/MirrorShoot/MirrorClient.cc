@@ -9,6 +9,12 @@ int main(int argc, char **argv)
 
     client.getSocket().bind();
 
+    GameClient game(client.getSocket(), 800, 400);
+
+    while (!game.gameOver())
+    {
+        game.update();
+    }
+
     return 0;
 }
-

@@ -5,73 +5,80 @@
 
 class GameServer
 {
-  private:
-    Socket server;
-    Socket *p1_, *p2_;
-    bool gameover;
+private:
+  Socket server;
+  Socket *p1_, *p2_;
+  bool gameover;
 
-  public:
-    GameServer(Socket sock, Socket *player_ONE, Socket *player_TWO)
-        : server(sock), p1_(player_ONE), p2_(player_TWO), gameover(false)
-    {
-        init();
-    };
+public:
+  GameServer(Socket sock, Socket *player_ONE, Socket *player_TWO)
+      : server(sock), p1_(player_ONE), p2_(player_TWO), gameover(false)
+  {
+    init();
+  };
 
-    ~GameServer(){};
+  ~GameServer(){};
 
-    void init();
-    void update();
+  void init();
+  void update();
 
-    bool gameOver() { return gameover; };
+  bool gameOver() { return gameover; };
 };
 
 class GameClient
 {
-  private:
-    XLDisplay &dpy;
-    // Servidor
-    Socket server;
-    // Alto y ancho de la pestaña
-    int width, height;
-    // Booleano de fin del juego
-    bool gameover;
-    int x, y;
-    int enemX, enemY;
+private:
+  XLDisplay &dpy;
+  // Servidor
+  Socket server;
+  // Alto y ancho de la pestaña
+  int width, height;
+  // Booleano de fin del juego
+  bool gameover;
+  // atributos player
+  int x, y, w, h;
+  // atributos bala
+  int bulX, bulY, bulW, bulH;
+  bool shoot = false;
+  // atributos enemigo
+  int enemX, enemY;
 
-  public:
-    GameClient(Socket sock, int w, int h)
-        : server(sock), width(w), height(h), gameover(false), dpy(XLDisplay::display())
-    {
-        init();
-    };
+  void checkBounds();
 
-    ~GameClient(){};
+public:
+  GameClient(Socket sock, int w, int h)
+      : server(sock), width(w), height(h), gameover(false), dpy(XLDisplay::display())
+  {
+    init();
+  };
 
-    void init();
-    void render(XLDisplay &dpy);
+  ~GameClient(){};
 
-    // Metodos tradicionales del juego
-    void update();
+  void init();
+  void render(XLDisplay &dpy);
+  void handleInput(XLDisplay &dpy);
 
-    // Getters y Setters
-    bool gameOver() { return gameover; };
+  void update();
+
+  // Getters y Setters
+  bool gameOver() { return gameover; };
 };
 
 class Message : public Serializable
 {
-  private:
-    int gameOver;
+private:
+  int gameOver;
 
-  public:
-    // Tamaño del mensaje
-    static const size_t MESSAGE_SIZE = 9 * sizeof(int);
+public:
+  // Tamaño del mensaje
+  static const size_t MESSAGE_SIZE = 9 * sizeof(int);
 
-    Message(){};
-    ~Message(){};
+  Message(){};
+  ~Message(){};
 
-    void to_bin();
+  void to_bin();
 
-    int from_bin(char *bobj);
+  int from_bin(char *bobj);
 
-    int isGameOver() { return gameOver; };
+  int isGameOver() { return gameOver; };
 };

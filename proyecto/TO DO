@@ -3,3 +3,21 @@
 	= Trasladar ese bucle al servidor de juego
 	= Integrar todo y que no explote
 	= Serializar los datos importantes para el paso de mensajes
+	
+	
+	
+	
+	
+*** SISTEMA DE MENSAJES ***
+
+# MENSAJE DE COLISIÓN
+= Sistema simple de colisiones entre rectangulos AABB
+
+	* if(xBala + anchoBala >= xEnemigo) // Si la bala ha traspasado al enemigo
+		// comprobamos que esté "dentro" del enemigo tanto por arriba como por abajo
+		if(yBala + alturaBala <= yEnemigo + alturaEnemigo) && (yBala + alturaBala >= yEnemigo)
+			// manda mensaje de colision
+		else if(yBala <= yEnemigo + alturaEnemigo) && (yBala >= yEnemigo)
+			// manda mensaje de colision
+			
+# MENSAJE DE VICTORIA/DERROTA

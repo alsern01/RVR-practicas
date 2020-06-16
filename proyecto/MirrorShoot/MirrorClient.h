@@ -1,6 +1,7 @@
 // Sockets y serializacion
 #include "Serializable.h"
 #include "Socket.h"
+#include "Game.h"
 
 class MirrorClient {
 private:
