@@ -45,7 +45,7 @@ private:
   XLDisplay &dpy;
 
   // Servidor
-  Socket server;
+  Socket sock_;
 
   // Alto y ancho de la pestaña
   int width, height;
@@ -72,7 +72,7 @@ private:
 
 public:
   GameClient(Socket sock, int w, int h)
-      : server(sock), width(w), height(h), gameover(false), dpy(XLDisplay::display())
+      : sock_(sock), width(w), height(h), gameover(false), dpy(XLDisplay::display())
   {
     init();
   };

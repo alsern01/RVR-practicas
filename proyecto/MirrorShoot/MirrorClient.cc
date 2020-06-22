@@ -5,11 +5,9 @@
 
 int main(int argc, char **argv)
 {
-    MirrorClient client(argv[1], argv[2]);
+    //MirrorClient client(argv[1], argv[2]);
 
-    client.getSocket().bind();
-
-    GameClient game(client.getSocket(), 800, 400);
+    GameClient game(Socket(argv[1], argv[2]), 800, 400);
 
     while (!game.gameOver())
     {

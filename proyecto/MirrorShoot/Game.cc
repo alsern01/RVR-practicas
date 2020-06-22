@@ -7,11 +7,25 @@
 void GameServer::init()
 {
     std::cout << "INIT!" << std::endl;
+    server.bind();
 }
 
 void GameServer::update()
 {
     std::cout << "UPDATE!" << std::endl;
+    Socket *sock;
+    Message *msg = new Message();
+
+    // recibe de jugador 1 y manda a jugador 2
+    server.recv(*msg, sock);
+    server.send(*msg, *p2_);
+
+    // recibe de jugador 2 y manda jugador 1
+    server.recv(*msg, sock);
+    server.send(*msg, *p1_);
+
+    if (msg->isGameOver())
+        gameover = true;
 }
 
 // ---------------------------------------------------------------------- //
@@ -20,6 +34,7 @@ void GameServer::update()
 
 void GameClient::init()
 {
+    sock_.bind();
     XLDisplay::init(width, height, "MirrorShoot");
     x = 150;
     y = height / 2;
