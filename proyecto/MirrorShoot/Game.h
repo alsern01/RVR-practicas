@@ -25,25 +25,50 @@ public:
   bool gameOver() { return gameover; };
 };
 
+// atributos balas
+struct Bullet
+{
+  int x, y, w, h;
+  Bullet(int x_, int y_) : x(x_), y(y_), w(20), h(20)
+  {
+  }
+  void update()
+  {
+    x += 10;
+  }
+};
+
 class GameClient
 {
 private:
+  // cosas render
   XLDisplay &dpy;
+
   // Servidor
   Socket server;
+
   // Alto y ancho de la pestaña
   int width, height;
+
   // Booleano de fin del juego
   bool gameover;
+  bool hit = false;
+
   // atributos player
-  int x, y, w, h;
-  // atributos bala
-  int bulX, bulY, bulW, bulH;
-  bool shoot = false;
+  int x, y;
+  int w, h;
+
+  // vector balas
+  std::vector<Bullet *> bullets;
+  // vector balas enemigas
+  std::vector<Bullet *> bulletsEnem;
+
   // atributos enemigo
   int enemX, enemY;
 
+  void drawBullets(XLDisplay &dpy);
   void checkBounds();
+  void checkCollision();
 
 public:
   GameClient(Socket sock, int w, int h)
@@ -67,13 +92,19 @@ public:
 class Message : public Serializable
 {
 private:
-  int gameOver;
+  // info juego
+  int gameOver, nBullets;
+  // info jugador
+  int posX, posY;
+  std::vector<Bullet *> bullets;
 
 public:
   // Tamaño del mensaje
   static const size_t MESSAGE_SIZE = 9 * sizeof(int);
 
   Message(){};
+  Message(const int &gameOv, const int &x, const int &y, const std::vector<Bullet *> &b)
+      : gameOver(gameOv), posX(x), posY(y), bullets(b){};
   ~Message(){};
 
   void to_bin();
