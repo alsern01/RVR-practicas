@@ -1,7 +1,18 @@
 #include <string>
 #include <unistd.h>
+#include <thread>
 #include <string.h>
-#include "MirrorClient.h"
+
+#include "Game.h"
+
+extern "C" void *_client_thread(void *arg)
+{
+    GameClient *client = static_cast<GameClient *>(arg);
+
+    client->manageMessage();
+
+    return 0;
+}
 
 int main(int argc, char **argv)
 {
@@ -9,10 +20,7 @@ int main(int argc, char **argv)
 
     GameClient game(Socket(argv[1], argv[2]), 800, 400);
 
-    while (!game.gameOver())
-    {
-        game.update();
-    }
+    game.update();
 
     return 0;
 }

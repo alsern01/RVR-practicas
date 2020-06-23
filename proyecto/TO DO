@@ -1,8 +1,8 @@
 **TO DO LIST**
-	= En el ejemplo probar pequeño bucle de juego
-	= Trasladar ese bucle al servidor de juego
-	= Integrar todo y que no explote
-	= Serializar los datos importantes para el paso de mensajes
+	= Acabar GameServer
+	= Probar recepcion y envio de mensajes entre sockets
+	= Cambiar input
+	= Ver como invertir el vector de balas del enemigo
 	
 	
 	
@@ -10,14 +10,5 @@
 	
 *** SISTEMA DE MENSAJES ***
 
-# MENSAJE DE COLISIÓN
-= Sistema simple de colisiones entre rectangulos AABB
-
-	* if(xBala + anchoBala >= xEnemigo) // Si la bala ha traspasado al enemigo
-		// comprobamos que esté "dentro" del enemigo tanto por arriba como por abajo
-		if(yBala + alturaBala <= yEnemigo + alturaEnemigo) && (yBala + alturaBala >= yEnemigo)
-			// manda mensaje de colision
-		else if(yBala <= yEnemigo + alturaEnemigo) && (yBala >= yEnemigo)
-			// manda mensaje de colision
-			
+# MENSAJE DE COLISIÓN	
 # MENSAJE DE VICTORIA/DERROTA

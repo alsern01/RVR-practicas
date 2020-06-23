@@ -76,6 +76,19 @@ int Socket::send(Serializable &obj, const Socket &sock)
     return 0;
 }
 
+int Socket::bind()
+{
+    // Conexion y control de errores
+    int bind = ::bind(sd, (const struct sockaddr *)&sa, sa_len);
+    if (bind != 0)
+    {
+        std::cerr << "bind: " << std::endl;
+        return -1;
+    }
+
+    return bind;
+}
+
 bool operator==(const Socket &s1, const Socket &s2)
 {
     //Comparar los campos sin_family, sin_addr.s_addr y sin_port
