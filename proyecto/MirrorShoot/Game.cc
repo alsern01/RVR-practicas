@@ -6,15 +6,15 @@
 
 void GameServer::init()
 {
-    std::cout << "INIT!" << std::endl;
     server.bind();
 }
 
 void GameServer::update()
 {
+    int jugadores = 0;
+
     while (!gameover)
     {
-        std::cout << "UPDATE!" << std::endl;
         Socket *sock;
         Message *msg = new Message();
 
@@ -25,7 +25,11 @@ void GameServer::update()
         case Message::LOGIN:
         {
             if (clients.size() < 2)
+            {
                 clients.push_back(sock);
+                jugadores++;
+                std::cout << "Jugador " << jugadores << "  conectado\n";
+            }
         }
         break;
         case Message::GAME:
@@ -33,7 +37,9 @@ void GameServer::update()
             for (int i = 0; i < clients.size(); ++i)
             {
                 if (!(*sock == *clients.at(i)))
+                {
                     server.send(*msg, *clients.at(i));
+                }
             }
         }
         break;
@@ -45,10 +51,16 @@ void GameServer::update()
             {
                 if (*sock == *clients.at(i))
                 {
+                    std::cout << "Jugador " << i + 1 << "  desconectado\n";
                     clients.erase(it);
                     erased = true;
                 }
                 ++it;
+            }
+
+            if (msg->isGameOver() == 1 && clients.size() == 0)
+            {
+                gameover = true;
             }
         }
         break;
@@ -56,9 +68,6 @@ void GameServer::update()
         default:
             break;
         }
-
-        if (msg->isGameOver())
-            gameover = true;
     }
 }
 
@@ -78,11 +87,11 @@ void GameClient::init()
     dpy.clear();
     render(dpy);
 
-    Message m(gameover, x, y, bullets);
-    m.type = Message::LOGIN;
-    sock_.send(m, sock_);
+    sendMessage(Message::LOGIN);
 }
 
+// Bucle principal del juego actualiza todos los elementos y procesa input
+// Envia la informacion necesaria al servidor
 void GameClient::update()
 {
     while (!gameover)
@@ -99,6 +108,9 @@ void GameClient::update()
             if (b->x < width)
                 b->update();
         }
+
+        // Enviar info al servidor
+        sendMessage(Message::GAME);
 
         // Renderizado
         render(dpy);
@@ -135,6 +147,12 @@ void GameClient::drawBullets(XLDisplay &dpy)
 {
     dpy.set_color(XLDisplay::BLACK);
     for (auto b : bullets)
+    {
+        dpy.rectangleFill(b->x, b->y, b->w, b->h);
+    }
+
+    dpy.set_color(XLDisplay::BROWN);
+    for (auto b : bulletsEnem)
     {
         dpy.rectangleFill(b->x, b->y, b->w, b->h);
     }
@@ -176,8 +194,8 @@ void GameClient::handleInput(XLDisplay &dpy)
     }
 
     case 'q':
-        disconnect();
         gameover = true;
+        sendMessage(Message::LOGOUT);
         break;
     }
 }
@@ -212,7 +230,7 @@ void GameClient::checkCollision()
             b->y < enemY + h &&
             b->h + b->y > enemY)
         {
-            std::cout << "COLISION \n";
+            std::cout << "COLISION ENEMIGO\n";
             hit = true;
         }
     }
@@ -223,15 +241,8 @@ void GameClient::checkCollision()
             b->x + b->w > x &&
             b->y < y + h &&
             b->h + b->y > y)
-            std::cout << "COLISION \n";
+            std::cout << "COLISION JUGADOR\n";
     }
-}
-
-void GameClient::disconnect()
-{
-    Message msg(gameover, x, y, bullets);
-    msg.type = Message::LOGOUT;
-    sock_.send(msg, sock_);
 }
 
 void GameClient::manageMessage()
@@ -242,15 +253,30 @@ void GameClient::manageMessage()
         sock_.recv(msg);
         if (msg.type == Message::GAME)
         {
-            enemX = msg.getX() * 2 + width / 3;
+            enemX = width - msg.getX() - w;
             enemY = msg.getY();
             bulletsEnem = msg.getBullets();
-            for (auto b : bullets)
+            for (auto b : bulletsEnem)
             {
                 b->x = width - x;
             }
         }
+        else if (msg.type == Message::LOGOUT)
+        {
+            std::cout << "El otro jugador se ha desconectado\n";
+        }
+        else if (msg.type == Message::LOGIN)
+        {
+            std::cout << "El otro jugador se ha conectado\n";
+        }
     }
+}
+
+void GameClient::sendMessage(int type_)
+{
+    Message m(gameover, x, y, bullets);
+    m.type = type_;
+    sock_.send(m, sock_);
 }
 
 // ---------------------------------------------------------------------- //
@@ -285,15 +311,24 @@ void Message::to_bin()
     {
         // copia la X de la bala
         memcpy(tmp, &bullets[i]->x, sizeof(int));
-        // para que no avance posiciones el puntero en el ultimo elemento del vector
-        if (i < nBullets - 1)
-            tmp += sizeof(int);
+        tmp += sizeof(int);
         // copia la Y de la bala
         memcpy(tmp, &bullets[i]->y, sizeof(int));
         // para que no avance posiciones el puntero en el ultimo elemento del vector
         if (i < nBullets - 1)
             tmp += sizeof(int);
     }
+
+    int id = open("data", O_CREAT | O_RDWR, 0666);
+
+    int errW = write(id, data(), size());
+
+    if (errW == -1)
+    {
+        std::cout << "Error escritura datos mensaje";
+    }
+
+    close(id);
 }
 
 int Message::from_bin(char *bobj)
@@ -320,16 +355,17 @@ int Message::from_bin(char *bobj)
     // de cada bala mientras avanza el puntero
     for (int i = 0; i < nBullets; i++)
     {
+        Bullet *b = new Bullet(0, 0);
         // copia la X de la bala
-        memcpy(&bullets[i]->x, tmp, sizeof(int));
-        // para que no avance posiciones el puntero en el ultimo elemento del vector
-        if (i < nBullets - 1)
-            tmp += sizeof(int);
+        memcpy(&b->x, tmp, sizeof(int));
+        tmp += sizeof(int);
         // copia la Y de la bala
-        memcpy(&bullets[i]->y, tmp, sizeof(int));
+        memcpy(&b->y, tmp, sizeof(int));
         // para que no avance posiciones el puntero en el ultimo elemento del vector
         if (i < nBullets - 1)
             tmp += sizeof(int);
+
+        bullets.push_back(b);
     }
 
     return 0;

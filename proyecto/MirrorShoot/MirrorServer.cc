@@ -18,13 +18,15 @@ static bool END = false;
 
 int main(int argc, char **argv)
 {
+    sigset_t waitset;
+    int sig;
+
     GameServer server(Socket(argv[1], argv[2]));
 
     server.update();
 
-    // MUTEX
-    std::unique_lock<std::mutex> lock(MUTEX);
-    V_COND.wait(lock, [&]() { return END; });
+    sigemptyset(&waitset);
+    sigaddset(&waitset, SIGTERM);
 
     return 0;
 }

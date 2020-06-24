@@ -20,6 +20,14 @@ int main(int argc, char **argv)
 
     GameClient game(Socket(argv[1], argv[2]), 800, 400);
 
+    pthread_attr_t attr;
+    pthread_t id;
+
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    // crea un hilo de ejecucion para el cliente
+    pthread_create(&id, &attr, _client_thread, static_cast<void *>(&game));
+
     game.update();
 
     return 0;

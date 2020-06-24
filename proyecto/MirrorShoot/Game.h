@@ -72,7 +72,7 @@ private:
   void checkCollision();
 
   // metodos del sistema conexion
-  void disconnect();
+  //void disconnect();
 
 public:
   GameClient(Socket sock, int w, int h)
@@ -91,6 +91,7 @@ public:
 
   // Metodos conexion del cliente
   void manageMessage();
+  void sendMessage(int type_);
 };
 
 class Message : public Serializable

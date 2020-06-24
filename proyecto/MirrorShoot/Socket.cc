@@ -44,7 +44,7 @@ int Socket::recv(Serializable &obj, Socket *&sock)
     struct sockaddr sa;
     socklen_t sa_len = sizeof(struct sockaddr);
 
-    char buffer[90];
+    char buffer[MAX_MESSAGE_SIZE];
 
     ssize_t bytes = ::recvfrom(sd, buffer, sizeof(buffer), 0, &sa, &sa_len);
 
