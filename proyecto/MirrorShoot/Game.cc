@@ -33,6 +33,7 @@ void GameServer::update()
         }
         break;
         case Message::GAME:
+        case Message::COLLISION:
         {
             for (int i = 0; i < clients.size(); ++i)
             {
@@ -51,7 +52,7 @@ void GameServer::update()
             {
                 if (*sock == *clients.at(i))
                 {
-                    std::cout << "Jugador " << i + 1 << "  desconectado\n";
+                    std::cout << "Jugador desconectado\n";
                     clients.erase(it);
                     erased = true;
                 }
@@ -105,12 +106,20 @@ void GameClient::update()
 
         for (auto b : bullets)
         {
-            if (b->x < width)
+            if (b->x < width && !hit && !enemyHit)
                 b->update();
         }
 
         // Enviar info al servidor
-        sendMessage(Message::GAME);
+        if (!hit)
+        {
+            sendMessage(Message::GAME);
+        }
+
+        if (enemyHit)
+        {
+            sendMessage(Message::COLLISION);
+        }
 
         // Renderizado
         render(dpy);
@@ -131,6 +140,9 @@ void GameClient::render(XLDisplay &dpy)
     dpy.set_color(XLDisplay::BLUE);
     dpy.rectangleFill(width / 3, 0, width / 3, height);
 
+    // Dibujar balas
+    drawBullets(dpy);
+
     // Dibujar al jugador
     dpy.set_color(XLDisplay::WHITE);
     dpy.rectangleFill(x, y, w, h);
@@ -139,8 +151,22 @@ void GameClient::render(XLDisplay &dpy)
     dpy.set_color(XLDisplay::RED);
     dpy.rectangleFill(enemX, enemY, w, h);
 
-    // Dibujar balas
-    drawBullets(dpy);
+    std::string t = "Q PARA CERRAR";
+    if (hit)
+    {
+        dpy.set_color(XLDisplay::BLACK);
+        std::string s = "PIERDES! TE HAN DADO!";
+        dpy.text(width / 2 - 100, height / 2, s);
+        dpy.text(width / 2 - 80, height / 2 + 20, t);
+    }
+
+    else if (enemyHit)
+    {
+        dpy.set_color(XLDisplay::BLACK);
+        std::string s = "GANAS! HAS ACERTADO AL RIVAL!";
+        dpy.text(width / 2 - 145, height / 2, s);
+        dpy.text(width / 2 - 80, height / 2 + 20, t);
+    }
 }
 
 void GameClient::drawBullets(XLDisplay &dpy)
@@ -164,28 +190,28 @@ void GameClient::handleInput(XLDisplay &dpy)
     switch (k)
     {
     case 'w':
-        if (!hit)
+        if (!hit && !enemyHit)
             y -= 10;
         break;
 
     case 'a':
-        if (!hit)
+        if (!hit && !enemyHit)
             x -= 10;
         break;
 
     case 's':
-        if (!hit)
+        if (!hit && !enemyHit)
             y += 10;
         break;
 
     case 'd':
-        if (!hit)
+        if (!hit && !enemyHit)
             x += 10;
         break;
 
     case ' ':
     {
-        if (!hit)
+        if (!hit && !enemyHit)
         {
             Bullet *b = new Bullet(x + w, y + (h / 2));
             bullets.push_back(b);
@@ -230,8 +256,7 @@ void GameClient::checkCollision()
             b->y < enemY + h &&
             b->h + b->y > enemY)
         {
-            std::cout << "COLISION ENEMIGO\n";
-            hit = true;
+            enemyHit = true;
         }
     }
     // bullets del malo con jugador
@@ -241,7 +266,9 @@ void GameClient::checkCollision()
             b->x + b->w > x &&
             b->y < y + h &&
             b->h + b->y > y)
-            std::cout << "COLISION JUGADOR\n";
+        {
+            hit = true;
+        }
     }
 }
 
@@ -251,23 +278,19 @@ void GameClient::manageMessage()
     {
         Message msg;
         sock_.recv(msg);
-        if (msg.type == Message::GAME)
+
+        // Actualiza los elementos del otro jugador
+        enemX = width - msg.getX() - w;
+        enemY = msg.getY();
+        bulletsEnem = msg.getBullets();
+        for (auto b : bulletsEnem)
         {
-            enemX = width - msg.getX() - w;
-            enemY = msg.getY();
-            bulletsEnem = msg.getBullets();
-            for (auto b : bulletsEnem)
-            {
-                b->x = width - x;
-            }
+            b->x = width - b->x - b->w;
         }
-        else if (msg.type == Message::LOGOUT)
+
+        if (msg.type == Message::COLLISION)
         {
-            std::cout << "El otro jugador se ha desconectado\n";
-        }
-        else if (msg.type == Message::LOGIN)
-        {
-            std::cout << "El otro jugador se ha conectado\n";
+            hit = true;
         }
     }
 }
@@ -318,17 +341,6 @@ void Message::to_bin()
         if (i < nBullets - 1)
             tmp += sizeof(int);
     }
-
-    int id = open("data", O_CREAT | O_RDWR, 0666);
-
-    int errW = write(id, data(), size());
-
-    if (errW == -1)
-    {
-        std::cout << "Error escritura datos mensaje";
-    }
-
-    close(id);
 }
 
 int Message::from_bin(char *bobj)

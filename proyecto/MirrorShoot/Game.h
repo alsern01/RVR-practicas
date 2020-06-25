@@ -34,7 +34,7 @@ struct Bullet
   }
   void update()
   {
-    x += 10;
+    x += 20;
   }
 };
 
@@ -44,7 +44,7 @@ private:
   // cosas render
   XLDisplay &dpy;
 
-  // Servidor
+  // Cliente
   Socket sock_;
 
   // Alto y ancho de la pestaña
@@ -52,11 +52,14 @@ private:
 
   // Booleano de fin del juego
   bool gameover;
+  // Booleano cuando impacta una bala en jugador
   bool hit = false;
+  // Booleano cuando impacta una bala en enemigo
+  bool enemyHit = false;
 
   // atributos player
-  int x, y;
-  int w, h;
+  int x, y; //  posicion
+  int w, h; // ancho-alto
 
   // vector balas
   std::vector<Bullet *> bullets;
@@ -66,13 +69,13 @@ private:
   // atributos enemigo
   int enemX, enemY;
 
-  // metodos del juego
+  // Metodos del juego
+  void init();
+  void render(XLDisplay &dpy);
+  void handleInput(XLDisplay &dpy);
   void drawBullets(XLDisplay &dpy);
   void checkBounds();
   void checkCollision();
-
-  // metodos del sistema conexion
-  //void disconnect();
 
 public:
   GameClient(Socket sock, int w, int h)
@@ -83,14 +86,11 @@ public:
 
   ~GameClient(){};
 
-  // Metodos del juego
-  void init();
-  void render(XLDisplay &dpy);
-  void handleInput(XLDisplay &dpy);
   void update();
 
-  // Metodos conexion del cliente
+  // Gestiona los mensajes recibidos del servidor
   void manageMessage();
+  // Manda mensaje al servidor
   void sendMessage(int type_);
 };
 
@@ -113,7 +113,8 @@ public:
   {
     LOGIN = 0,
     GAME = 1,
-    LOGOUT = 2
+    LOGOUT = 2,
+    COLLISION = 3
   };
 
   Message(){};

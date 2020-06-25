@@ -1,8 +1,6 @@
 **TO DO LIST**
-	= Acabar GameServer
-	= Probar recepcion y envio de mensajes entre sockets
+	= Acabar mensajes
 	= Cambiar input
-	= Ver como invertir el vector de balas del enemigo
 	
 	
 	
@@ -10,5 +8,5 @@
 	
 *** SISTEMA DE MENSAJES ***
 
-# MENSAJE DE COLISIÓN	
-# MENSAJE DE VICTORIA/DERROTA
+# MENSAJE DE COLISIÓN	X
+# MENSAJE DE VICTORIA/DERROTA	X
