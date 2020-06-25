@@ -52,6 +52,7 @@ private:
 
   // Booleano de fin del juego
   bool gameover;
+  bool waiting = false;
   // Booleano cuando impacta una bala en jugador
   bool hit = false;
   // Booleano cuando impacta una bala en enemigo
@@ -114,7 +115,9 @@ public:
     LOGIN = 0,
     GAME = 1,
     LOGOUT = 2,
-    COLLISION = 3
+    COLLISION = 3,
+    WAITING = 4,
+    START = 5
   };
 
   Message(){};

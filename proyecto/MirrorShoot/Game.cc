@@ -29,6 +29,18 @@ void GameServer::update()
                 clients.push_back(sock);
                 jugadores++;
                 std::cout << "Jugador " << jugadores << "  conectado\n";
+                msg->type = Message::WAITING;
+                server.send(*msg, *sock);
+            }
+            // si hay 2 jugadores en la partida empieza
+            if (clients.size() == 2)
+            {
+                // si hay dos clientes conectados empieza partida
+                msg->type = Message::START;
+                for (int i = 0; i < clients.size(); i++)
+                {
+                    server.send(*msg, *clients.at(i));
+                }
             }
         }
         break;
@@ -55,6 +67,7 @@ void GameServer::update()
                     std::cout << "Jugador desconectado\n";
                     clients.erase(it);
                     erased = true;
+                    jugadores--;
                 }
                 ++it;
             }
@@ -62,6 +75,12 @@ void GameServer::update()
             if (msg->isGameOver() == 1 && clients.size() == 0)
             {
                 gameover = true;
+            }
+
+            for (int i = 0; i < clients.size(); i++)
+            {
+                msg->type = Message::WAITING;
+                server.send(*msg, *clients.at(i));
             }
         }
         break;
@@ -80,8 +99,8 @@ void GameClient::init()
 {
     XLDisplay::init(width, height, "MirrorShoot");
     x = 150;
-    y = height / 2;
-    enemX = x * 2 + width / 3;
+    y = (height / 2) - h;
+    enemX = width - x - w;
     enemY = y;
     w = h = 80;
 
@@ -106,7 +125,7 @@ void GameClient::update()
 
         for (auto b : bullets)
         {
-            if (b->x < width && !hit && !enemyHit)
+            if (b->x < width && !hit && !enemyHit && !waiting)
                 b->update();
         }
 
@@ -152,9 +171,9 @@ void GameClient::render(XLDisplay &dpy)
     dpy.rectangleFill(enemX, enemY, w, h);
 
     std::string t = "Q PARA CERRAR";
+    dpy.set_color(XLDisplay::BLACK);
     if (hit)
     {
-        dpy.set_color(XLDisplay::BLACK);
         std::string s = "PIERDES! TE HAN DADO!";
         dpy.text(width / 2 - 100, height / 2, s);
         dpy.text(width / 2 - 80, height / 2 + 20, t);
@@ -162,10 +181,18 @@ void GameClient::render(XLDisplay &dpy)
 
     else if (enemyHit)
     {
-        dpy.set_color(XLDisplay::BLACK);
         std::string s = "GANAS! HAS ACERTADO AL RIVAL!";
         dpy.text(width / 2 - 145, height / 2, s);
         dpy.text(width / 2 - 80, height / 2 + 20, t);
+    }
+    if (waiting)
+    {
+        t = "ESPERANDO AL OTRO JUGADOR";
+        dpy.text(width / 2 - 135, height / 2, t);
+        t = "MOVIMIENTO: W,A,S,D | DISPARO: ESPACIO";
+        dpy.text(width / 2 - 165, height / 2 + 20, t);
+        t = "Q PARA CERRAR";
+        dpy.text(width / 2 - 80, height / 2 + 40, t);
     }
 }
 
@@ -190,28 +217,28 @@ void GameClient::handleInput(XLDisplay &dpy)
     switch (k)
     {
     case 'w':
-        if (!hit && !enemyHit)
+        if (!hit && !enemyHit && !waiting)
             y -= 10;
         break;
 
     case 'a':
-        if (!hit && !enemyHit)
+        if (!hit && !enemyHit && !waiting)
             x -= 10;
         break;
 
     case 's':
-        if (!hit && !enemyHit)
+        if (!hit && !enemyHit && !waiting)
             y += 10;
         break;
 
     case 'd':
-        if (!hit && !enemyHit)
+        if (!hit && !enemyHit && !waiting)
             x += 10;
         break;
 
     case ' ':
     {
-        if (!hit && !enemyHit)
+        if (!hit && !enemyHit && !waiting)
         {
             Bullet *b = new Bullet(x + w, y + (h / 2));
             bullets.push_back(b);
@@ -291,6 +318,14 @@ void GameClient::manageMessage()
         if (msg.type == Message::COLLISION)
         {
             hit = true;
+        }
+        else if (msg.type == Message::WAITING)
+        {
+            waiting = !waiting;
+        }
+        else if (msg.type == Message::START)
+        {
+            waiting = false;
         }
     }
 }
