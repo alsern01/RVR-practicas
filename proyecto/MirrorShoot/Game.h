@@ -2,6 +2,10 @@
 
 #include "Serializable.h"
 #include "Socket.h"
+#include <time.h>
+
+typedef struct timespec timespec;
+const int FRAME_RATE = 60;
 
 class GameServer
 {
@@ -70,6 +74,11 @@ private:
   // atributos enemigo
   int enemX, enemY;
 
+  // frame rate
+  timespec startFrame;
+  timespec endFrame;
+  unsigned long targetFrame;
+
   // Metodos del juego
   void init();
   void render(XLDisplay &dpy);
@@ -106,7 +115,7 @@ private:
 
 public:
   // Tamaño del mensaje
-  static const size_t MESSAGE_SIZE = 9 * sizeof(int);
+  static const size_t MESSAGE_SIZE = 20 * sizeof(int);
 
   // Tipo de mensaje
   int type;

@@ -77,8 +77,9 @@ void GameServer::update()
                 gameover = true;
             }
 
-            for (int i = 0; i < clients.size(); i++)
+            for (int i = 0; i < clients.size() && msg->isGameOver() != 1; i++)
             {
+
                 msg->type = Message::WAITING;
                 server.send(*msg, *clients.at(i));
             }
@@ -108,6 +109,9 @@ void GameClient::init()
     render(dpy);
 
     sendMessage(Message::LOGIN);
+
+    clock_gettime(CLOCK_REALTIME, &startFrame);
+    targetFrame = 1000000000 / 60;
 }
 
 // Bucle principal del juego actualiza todos los elementos y procesa input
@@ -123,10 +127,18 @@ void GameClient::update()
         checkBounds();
         checkCollision();
 
+        bool erased = false;
+        std::vector<Bullet *>::iterator it = bullets.begin();
         for (auto b : bullets)
         {
             if (b->x < width && !hit && !enemyHit && !waiting)
                 b->update();
+
+            else if (b->x > width)
+            {
+                bullets.erase(it);
+            }
+            ++it;
         }
 
         // Enviar info al servidor
@@ -144,6 +156,20 @@ void GameClient::update()
         render(dpy);
 
         dpy.flush();
+
+        // Frame rate
+        clock_gettime(CLOCK_REALTIME, &endFrame); // coge el tiempo actual
+        //  calcula el tiempo pasado durante 1 frame
+        unsigned long frameTime = (endFrame.tv_sec - startFrame.tv_sec) * 1000000000 + (endFrame.tv_nsec - startFrame.tv_nsec);
+        timespec sleepTime;
+        sleepTime.tv_sec = 0;
+        // resta ese tiempo del tiempo entre frames que queremos
+        sleepTime.tv_nsec = targetFrame - frameTime;
+        // espera el tiempo para conseguir el framerate deseado
+        nanosleep(&sleepTime, 0);
+        clock_gettime(CLOCK_REALTIME, &endFrame); // vuelve a coger el tiempo
+        // actualiza el frame de inicio
+        startFrame = endFrame;
     }
 }
 
@@ -213,7 +239,7 @@ void GameClient::drawBullets(XLDisplay &dpy)
 
 void GameClient::handleInput(XLDisplay &dpy)
 {
-    char k = dpy.wait_key();
+    char k = dpy.handleKey();
     switch (k)
     {
     case 'w':

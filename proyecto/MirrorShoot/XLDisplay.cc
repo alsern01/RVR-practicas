@@ -8,22 +8,22 @@ std::unique_ptr<XLDisplay> XLDisplay::_display = nullptr;
 
 //------------------------------------------------------------------------------
 
-Display* XLDisplay::xl_dpy;
-Window   XLDisplay::xl_wdw;
+Display *XLDisplay::xl_dpy;
+Window XLDisplay::xl_wdw;
 
 GC XLDisplay::xl_gc;
 
 Colormap XLDisplay::xl_cm;
 std::vector<int> XLDisplay::xl_colors;
 
-XFontStruct* XLDisplay::xl_font;
+XFontStruct *XLDisplay::xl_font;
 
-const char * XLDisplay::font =  "*-liberation sans-*-r-*-*-*-*";
+const char *XLDisplay::font = "*-liberation sans-*-r-*-*-*-*";
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-void XLDisplay::init(int32_t w, int32_t h, const std::string& t)
+void XLDisplay::init(int32_t w, int32_t h, const std::string &t)
 {
     if (_display != nullptr)
     {
@@ -34,7 +34,7 @@ void XLDisplay::init(int32_t w, int32_t h, const std::string& t)
 
     xl_dpy = XOpenDisplay(0);
 
-    if(xl_dpy == nullptr)
+    if (xl_dpy == nullptr)
     {
         throw std::runtime_error("XOpenDisplay: cannot open display.\n");
     }
@@ -46,7 +46,7 @@ void XLDisplay::init(int32_t w, int32_t h, const std::string& t)
     // 3 borde de la ventana
     // white, negro (black) borde y blanco (white) fondo de la ventana
     xl_wdw = XCreateSimpleWindow(xl_dpy, DefaultRootWindow(xl_dpy),
-            0, 0, w, h, 3, black, white);
+                                 0, 0, w, h, 3, black, white);
 
     XSetWindowAttributes attr;
     attr.backing_store = Always;
@@ -65,7 +65,7 @@ void XLDisplay::init(int32_t w, int32_t h, const std::string& t)
     XSetForeground(xl_dpy, xl_gc, black);
 
     //Inicializa el mapa de colores
-    xl_cm =  DefaultColormap(xl_dpy, DefaultScreen(xl_dpy));
+    xl_cm = DefaultColormap(xl_dpy, DefaultScreen(xl_dpy));
 
     std::vector<std::string> named = {"red", "brown", "blue", "yellow", "green"};
 
@@ -90,7 +90,7 @@ void XLDisplay::init(int32_t w, int32_t h, const std::string& t)
     // Carga la fuente por defecto
     xl_font = XLoadQueryFont(xl_dpy, const_cast<char *>(font));
 
-    if ( xl_font == nullptr )
+    if (xl_font == nullptr)
     {
         throw std::runtime_error("XLoadQueryFont: cannot load font.\n");
     }
@@ -119,16 +119,43 @@ char XLDisplay::wait_key()
 {
     XEvent event;
 
-    while(true)
+    while (true)
     {
         XNextEvent(xl_dpy, &event);
 
-        if ( event.type != KeyPress )
+        if (event.type != KeyPress)
         {
             continue;
         }
 
-        return XLookupKeysym(&event.xkey,0);
+        return XLookupKeysym(&event.xkey, 0);
     }
 }
 
+char XLDisplay::handleKey()
+{
+    XEvent event;
+
+    while (true)
+    {
+        if (XPending(xl_dpy))
+        {
+            XNextEvent(xl_dpy, &event);
+
+            switch (event.type)
+            {
+            case KeyPress:
+                return XLookupKeysym(&event.xkey, 0);
+                break;
+
+            case DestroyNotify:
+                return 'q';
+                break;
+
+            default:
+                break;
+            }
+        }
+        return '\0';
+    }
+}

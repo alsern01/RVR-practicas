@@ -131,6 +131,7 @@ class XLDisplay
 
     //Espera por la pulsación de una tecla, que devuelve la función
     char wait_key();
+    char handleKey();
 
   private:
     XLDisplay() = default;
